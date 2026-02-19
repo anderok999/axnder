@@ -1,0 +1,4 @@
+nanodlna
+Pillow
+gTTS
+twisted
