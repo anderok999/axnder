@@ -33,8 +33,8 @@ El sistema utiliza un stack modular para máxima eficiencia:
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone [https://github.com/tu-usuario/MINERANDER.git](https://github.com/tu-usuario/MINERANDER.git)
-    cd MINERANDER
+    git clone [https://github.com/anderok999/axnder.git](https://github.com/anderok999/axnder.git)
+    
     ```
 
 2.  **Ejecutar el Setup Automatizado:**
@@ -60,4 +60,5 @@ El sistema utiliza un stack modular para máxima eficiencia:
 Este software ha sido desarrollado con fines de investigación en protocolos de red y automatización del hogar. El autor (**AXNDER**) no se hace responsable del uso indebido de las capacidades de inyección remota del software.
 
 ---
+
 **Desarrollado por AXNDER | 2026**
