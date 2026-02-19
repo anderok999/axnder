@@ -33,8 +33,8 @@ El sistema utiliza un stack modular para máxima eficiencia:
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone [https://github.com/anderok999/axnder.git](https://github.com/anderok999/axnder.git)
-    
+    git clone [https://github.com/tu-usuario/MINERANDER.git](https://github.com/tu-usuario/MINERANDER.git)
+    cd MINERANDER
     ```
 
 2.  **Ejecutar el Setup Automatizado:**
@@ -55,10 +55,39 @@ El sistema utiliza un stack modular para máxima eficiencia:
 * `setup.py`: Instalador de dependencias y verificador de integridad.
 
 ---
+## 📱 Soporte Multiplataforma (Híbrido)
+
+Esta versión de **MINERANDER** ha sido optimizada para funcionar sin cambios en el código tanto en entornos de escritorio como móviles:
+
+* **💻 Windows**: Utiliza comandos nativos de limpieza de puertos (`taskkill`) y gestión de terminal.
+* **📱 Android (Termux)**: Sistema inteligente de bypass de permisos. Si el puerto estándar está bloqueado, el inyector cambia automáticamente a puertos de respaldo (9500+) para evitar errores de ejecución.
+
+
+
+---
+
+## 🛠️ Instalación en Termux (Android)
+
+Para llevar el poder de **MINERANDER** en tu bolsillo, sigue estos pasos en tu terminal móvil:
+
+1.  **Actualizar entorno**:
+    ```bash
+    pkg update && pkg upgrade
+    pkg install python git psmisc
+    ```
+2.  **Clonar y configurar**:
+    ```bash
+    git clone [https://github.com/anderok999/axnder.git](https://github.com/anderok999/axnder.git)
+    cd axnder
+    pip install -r requirements.txt
+    ```
+3.  **Ejecutar**:
+    ```bash
+    python main.py
+    ```
 
 ## ⚠️ Nota de Seguridad
 Este software ha sido desarrollado con fines de investigación en protocolos de red y automatización del hogar. El autor (**AXNDER**) no se hace responsable del uso indebido de las capacidades de inyección remota del software.
 
 ---
-
 **Desarrollado por AXNDER | 2026**

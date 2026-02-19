@@ -1,75 +1,41 @@
 import os
-import subprocess
-import time
+import ghost_writer
+import voice_engine
 
-class AxnderEngine:
-    def __init__(self):
-        self.found_devices = []
+def limpiar_puerto(sistema):
+    """Intenta liberar el puerto 9000 según el sistema."""
+    try:
+        if sistema == "Windows":
+            os.system("for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :9000') do taskkill /f /pid %a >nul 2>&1")
+            return "9000"
+        else:
+            # En Android/Termux, si fuser falla, devolvemos un puerto alternativo
+            resultado = os.system("fuser -k 9000/tcp > /dev/null 2>&1")
+            if resultado != 0:
+                # Si no hay permisos para matar procesos, usamos el 9500
+                return "9500"
+            return "9000"
+    except:
+        return "9500"
 
-    def _kill_port_9000(self):
-        """Busca y destruye cualquier proceso usando el puerto 9000 para evitar Error 10048"""
-        if os.name == 'nt':
-            try:
-                # Busca el PID que está escuchando en el puerto 9000
-                cmd = 'netstat -ano | findstr :9000'
-                result = subprocess.check_output(cmd, shell=True).decode()
-                for line in result.splitlines():
-                    if "LISTENING" in line:
-                        pid = line.strip().split()[-1]
-                        subprocess.run(f'taskkill /F /PID {pid}', shell=True, capture_output=True)
-                        print(f"[*] CANAL LIBERADO (PID {pid})")
-                time.sleep(0.8)
-            except:
-                pass # El puerto ya está libre
+def run_payload(ip, file_path, sistema):
+    puerto = limpiar_puerto(sistema)
+    print(f"[*] Inyectando payload en puerto {puerto}...")
+    os.system(f"nanodlna play --device {ip} {file_path} --port {puerto}")
 
-    def scan_network(self):
-        from nanodlna import devices
-        self.found_devices = devices.get_devices(timeout=5)
-        return self.found_devices
+def run_ghost_write(ip, text, sistema):
+    puerto = limpiar_puerto(sistema)
+    img_path = ghost_writer.create_terminal_message(text)
+    print(f"[*] Enviando mensaje visual a {ip}...")
+    os.system(f"nanodlna play --device {ip} {img_path} --port {puerto}")
 
-    def inject_sequence(self, device_index, target_file):
-        """MODO SHOW: Intro de terminal + Archivo final"""
-        target = self.found_devices[device_index]
-        location = target.get('location', '') if isinstance(target, dict) else getattr(target, 'location', '')
-        intro_video = "intro_axnder.mp4"
-
-        self._kill_port_9000()
-
-        try:
-            print(f"\n[*] INICIANDO SECUENCIA COMPLETA EN: {location}")
-            # FASE 1: Intro
-            subprocess.Popen(f'nanodlna play "{intro_video}" --device "{location}"', shell=True)
-            
-            # Tiempo de espera de tu intro (ajustado a 6.5s)
-            time.sleep(6.5) 
-            
-            # FASE 2: Purga y Cambio
-            self._kill_port_9000()
-            
-            print(f"[+] ACCESO CONCEDIDO. PROYECTANDO PAYLOAD: {target_file}")
-            subprocess.Popen(f'nanodlna play "{target_file}" --device "{location}"', shell=True)
-            return True
-        except Exception as e:
-            print(f"[-] Error en secuencia: {e}")
-            return False
-
-    def inject_direct(self, device_index, target_file):
-        """MODO NINJA: Inyección inmediata sin intro (para Ghost Write)"""
-        target = self.found_devices[device_index]
-        location = target.get('location', '') if isinstance(target, dict) else getattr(target, 'location', '')
-        
-        self._kill_port_9000()
-        
-        try:
-            print(f"\n[*] EJECUTANDO INYECCIÓN DIRECTA EN: {location}")
-            subprocess.Popen(f'nanodlna play "{target_file}" --device "{location}"', shell=True)
-            return True
-        except Exception as e:
-            print(f"[-] Error en inyección directa: {e}")
-            return False
-
-    def stop_all(self, device_index):
-        target = self.found_devices[device_index]
-        location = target.get('location', '') if isinstance(target, dict) else getattr(target, 'location', '')
-        self._kill_port_9000()
-        subprocess.run(f'nanodlna stop --device "{location}"', shell=True)
+def run_ghost_voice(ip, text, sistema):
+    puerto = limpiar_puerto(sistema)
+    # Genera imagen y audio
+    img_path = ghost_writer.create_terminal_message(text)
+    audio_path = voice_engine.generate_voice(text)
+    
+    print(f"[*] Ejecutando Ghost Voice en {ip}...")
+    # Primero enviamos la imagen y luego el audio (o viceversa según prefieras)
+    os.system(f"nanodlna play --device {ip} {img_path} --port {puerto}")
+    os.system(f"nanodlna play --device {ip} {audio_path} --port {puerto}")
