@@ -1,31 +1,57 @@
 import os
-import random
-import ghost_writer
-import voice_engine
+import subprocess
+import time
 
-def obtener_puerto_libre():
-    """Genera un puerto aleatorio para evitar colisiones en Android/Termux."""
-    return random.randint(9000, 9800)
+class AxnderEngine:
+    def __init__(self):
+        self.found_devices = []
+        self._prepare_environment()
 
-def run_payload(ip, file_path, sistema):
-    puerto = obtener_puerto_libre()
-    print(f"[*] Usando puerto dinámico: {puerto}")
-    os.system(f"nanodlna play --device {ip} {file_path} --port {puerto}")
+    def _prepare_environment(self):
+        """Libera el protocolo SSDP en Windows."""
+        if os.name == 'nt':
+            servicios = ["SSDPSRV", "upnphost"]
+            for srv in servicios:
+                subprocess.run(f'net stop {srv} /y', shell=True, capture_output=True)
 
-def run_ghost_write(ip, text, sistema):
-    puerto = obtener_puerto_libre()
-    img_path = ghost_writer.create_terminal_message(text)
-    print(f"[*] Usando puerto dinámico: {puerto}")
-    print(f"[*] Enviando interfaz visual a {ip}...")
-    os.system(f"nanodlna play --device {ip} {img_path} --port {puerto}")
+    def _kill_port_9000(self):
+        """Elimina procesos residuales para liberar el canal de datos."""
+        if os.name == 'nt':
+            try:
+                # Mata cualquier instancia previa de nanodlna
+                subprocess.run('taskkill /F /IM nanodlna.exe /T', shell=True, capture_output=True)
+                time.sleep(0.5)
+            except:
+                pass
 
-def run_ghost_voice(ip, text, sistema):
-    puerto = obtener_puerto_libre()
-    img_path = ghost_writer.create_terminal_message(text)
-    audio_path = voice_engine.generate_voice(text)
-    print(f"[*] Usando puerto dinámico: {puerto}")
-    print(f"[*] Ejecutando Ghost Voice en {ip}...")
-    # Enviamos imagen y luego audio
-    os.system(f"nanodlna play --device {ip} {img_path} --port {puerto}")
-    # Usamos un puerto distinto para el audio para evitar solapamiento
-    os.system(f"nanodlna play --device {ip} {audio_path} --port {puerto + 1}")
+    def scan_network(self):
+        from nanodlna import devices
+        self.found_devices = devices.get_devices(timeout=7)
+        return self.found_devices
+
+    def inject_sequence(self, device_index, target_file):
+        target = self.found_devices[device_index]
+        location = target.get('location', '') if isinstance(target, dict) else getattr(target, 'location', '')
+        intro_video = "intro_axnder.mp4"
+        self._kill_port_9000()
+        try:
+            subprocess.Popen(f'nanodlna play "{intro_video}" --device "{location}"', shell=True)
+            time.sleep(6.5) 
+            self._kill_port_9000()
+            subprocess.Popen(f'nanodlna play "{target_file}" --device "{location}"', shell=True)
+            return True
+        except:
+            return False
+
+    def inject_direct(self, device_index, target_file):
+        target = self.found_devices[device_index]
+        location = target.get('location', '') if isinstance(target, dict) else getattr(target, 'location', '')
+        self._kill_port_9000()
+        subprocess.Popen(f'nanodlna play "{target_file}" --device "{location}"', shell=True)
+        return True
+
+    def stop_all(self, device_index):
+        target = self.found_devices[device_index]
+        location = target.get('location', '') if isinstance(target, dict) else getattr(target, 'location', '')
+        self._kill_port_9000()
+        subprocess.run(f'nanodlna stop --device "{location}"', shell=True)

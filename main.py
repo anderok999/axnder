@@ -1,107 +1,81 @@
+from branding import show_banner, clear_screen, typewriter_effect
+from injector import AxnderEngine
+from ghost_writer import create_terminal_message
+from voice_engine import generate_voice_msg
+import time
 import os
-import platform
-import sys
-import subprocess
-import re
-from branding import show_banner
-import injector
-
-def limpiar_pantalla(sistema):
-    if sistema == "Windows":
-        os.system("cls")
-    else:
-        os.system("clear")
-
-def buscar_tv_automatica(sistema):
-    """Escanea la red local buscando dispositivos activos."""
-    print(f"[*] Iniciando escaneo de red en modo {sistema}...")
-    dispositivos = []
-    
-    try:
-        # Comando según el sistema operativo
-        # Windows usa 'arp -a', Termux/Linux prefiere 'ip neighbor'
-        cmd = "arp -a" if sistema == "Windows" else "ip neighbor show"
-        scan = subprocess.check_output(cmd, shell=True, stderr=subprocess.DEVNULL).decode("utf-8")
-        
-        # Filtro Regex para extraer direcciones IPv4
-        ips_encontradas = re.findall(r'[0-9]+(?:\.[0-9]+){3}', scan)
-        
-        # Eliminamos duplicados y filtramos la IP del router (comúnmente .1 o .254)
-        dispositivos = sorted(list(set([ip for ip in ips_encontradas if not ip.endswith((".1", ".254"))])))
-        
-    except Exception as e:
-        print(f"[!] Error durante el escaneo: {e}")
-
-    if dispositivos:
-        print(f"\n[+] Dispositivos detectados en tu red:")
-        for i, ip in enumerate(dispositivos):
-            print(f"  [{i}] Target IP: {ip}")
-        
-        print(f"  [{len(dispositivos)}] Introducir IP manualmente")
-        
-        sel = input("\n[AXNDER] Selecciona un índice: ")
-        
-        if sel.isdigit():
-            idx = int(sel)
-            if idx < len(dispositivos):
-                return dispositivos[idx]
-        
-        # Si elige el último índice o pone algo no válido, pide manual
-        return input("[+] Introduce la IP manualmente: ")
-    else:
-        print("[!] No se detectaron dispositivos automáticamente.")
-        return input("[+] Introduce la IP de la TV manualmente: ")
 
 def main():
-    # 1. Identificación de Entorno
-    sistema_actual = platform.system()
-    limpiar_pantalla(sistema_actual)
-    
-    # 2. Branding AXNDER
+    clear_screen()
     show_banner()
-    print(f"--- [MODO: {sistema_actual.upper()}] ---")
-    print("Estableciendo protocolos RNIBO...\n")
-
-    # 3. Escaneo Automático de Objetivo
-    target_ip = buscar_tv_automatica(sistema_actual)
     
-    if not target_ip:
-        print("[!] Error: No se definió un objetivo. Abortando.")
+    engine = AxnderEngine()
+    typewriter_effect("\033[96m[*] INICIANDO PROTOCOLO RNIBO (SCANN V4)...\033[0m")
+    
+    try:
+        devs = engine.scan_network()
+    except Exception as e:
+        print(f"\033[91m[-] ERROR DE RED: {e}\033[0m")
+        return
+    
+    if not devs:
+        print("\033[91m[-] ERROR: NO SE ENCONTRARON OBJETIVOS.\033[0m")
         return
 
-    print(f"\n[*] Objetivo fijado: {target_ip}")
-    print("-" * 40)
+    print("\n ID | OBJETIVO                   | DIRECCIÓN XML")
+    print(" " + "-"*65)
+    for idx, d in enumerate(devs):
+        name = d.get('friendly_name', 'TV') if isinstance(d, dict) else getattr(d, 'friendly_name', 'TV')
+        loc = d.get('location', 'S/N') if isinstance(d, dict) else getattr(d, 'location', 'S/N')
+        print(f" {idx:<2} | {name[:25]:<26} | {loc}")
+    print(" " + "-"*65)
 
-    # 4. Menú de Operaciones
-    print("[1] Inyección RNIBO (Video Intro + Payload)")
-    print("[2] Ghost Write (Texto Gigante en Pantalla)")
-    print("[3] Ghost Voice (Texto + Voz TTS)")
-    print("[4] Cambiar Objetivo (Rescanear)")
-    print("[5] Salir")
-    
-    opcion = input("\n[AXNDER-MINERANDER]>> ")
+    try:
+        target_id = int(input("\n[?] SELECCIONA EL ID DEL OBJETIVO: "))
+        
+        while True:
+            print("\n\033[96m" + "—"*35)
+            print("   CENTRO DE CONTROL AXNDER")
+            print("—"*35 + "\033[0m")
+            print(" 1. INYECTAR ARCHIVO (INTRO + PAYLOAD)")
+            print(" 2. GHOST WRITE (SOLO TEXTO)")
+            print(" 3. GHOST VOICE (TEXTO + VOZ)")
+            print(" 4. ABORTAR/STOP")
+            print(" 5. SALIR")
+            
+            opc = input("\n[AXNDER]>> ")
 
-    if opcion == "5":
-        print("Cerrando sesión del sistema...")
-        sys.exit()
-    elif opcion == "4":
-        return main() # Reinicia para volver a escanear
+            if opc == "1":
+                file_path = input("[?] ARCHIVO (ej: 1.jpeg): ")
+                if os.path.exists(file_path):
+                    engine.inject_sequence(target_id, file_path)
+                else:
+                    print("\033[91m[!] ARCHIVO NO ENCONTRADO.\033[0m")
+            
+            elif opc == "2":
+                msg = input("[?] MENSAJE VISUAL: ")
+                img_path = create_terminal_message(msg)
+                engine.inject_direct(target_id, img_path)
+                print("\033[92m[+] INTERFAZ VISUAL ENVIADA.\033[0m")
 
-    # 5. Ejecución de Módulos vía Injector
-    if opcion == "1":
-        injector.run_payload(target_ip, "intro_axnder.mp4", sistema_actual)
-    elif opcion == "2":
-        msg = input("[?] MENSAJE VISUAL: ")
-        injector.run_ghost_write(target_ip, msg, sistema_actual)
-    elif opcion == "3":
-        msg = input("[?] MENSAJE PARA VOZ: ")
-        injector.run_ghost_voice(target_ip, msg, sistema_actual)
-    else:
-        print("[!] Opción inválida.")
+            elif opc == "3":
+                msg = input("[?] MENSAJE PARA MOSTRAR Y ESCUCHAR: ")
+                print("[*] Sincronizando multimedia...")
+                img_path = create_terminal_message(msg)
+                audio_path = generate_voice_msg(msg)
+                engine.inject_direct(target_id, img_path)
+                time.sleep(2.5) 
+                engine.inject_direct(target_id, audio_path)
+                print("\033[92m[+] ATAQUE MULTIMODAL COMPLETADO.\033[0m")
+
+            elif opc == "4":
+                engine.stop_all(target_id)
+                print("\033[93m[!] Proyección detenida.\033[0m")
+
+            elif opc == "5":
+                break
+    except Exception as e:
+        print(f"[-] ERROR: {e}")
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n\n[!] Operación cancelada por el usuario.")
-        sys.exit()
+    main()
