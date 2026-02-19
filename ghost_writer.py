@@ -2,56 +2,40 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 
 def create_terminal_message(text):
-    # 1. Definimos una resolución Full HD para que la TV no lo vea pequeño
+    # Resolución Full HD
     width, height = 1920, 1080
-    
-    # Creamos el lienzo negro
     image = Image.new('RGB', (width, height), color='black')
     draw = ImageDraw.Draw(image)
     
-    # 2. Sistema inteligente de fuentes (Detección de SO)
-    font_path = None
-    # Intentamos rutas comunes según el sistema para asegurar texto grueso (Bold)
-    possible_fonts = [
-        "/system/fonts/Roboto-Bold.ttf",          # Android (Termux)
-        "C:\\Windows\\Fonts\\arialbd.ttf",        # Windows
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", # Linux
-        "arial.ttf"                               # Fallback
+    # Lista extendida de fuentes para Android y Windows
+    font_paths = [
+        "/system/fonts/Roboto-Bold.ttf",
+        "/system/fonts/DroidSans-Bold.ttf",
+        "C:\\Windows\\Fonts\\arialbd.ttf",
+        "arial.ttf"
     ]
 
-    for f in possible_fonts:
-        if os.path.exists(f):
-            font_path = f
+    font_path = None
+    for path in font_paths:
+        if os.path.exists(path):
+            font_path = path
             break
 
-    # 3. Ajustamos el tamaño de fuente (Gigante para impacto visual)
-    font_size = 180 
-    
+    font_size = 200 # Tamaño masivo
     try:
         if font_path:
             font = ImageFont.truetype(font_path, font_size)
         else:
             font = ImageFont.load_default()
-            print("[!] Advertencia: Usando fuente por defecto (puede verse pequeña).")
-    except Exception as e:
+            print("[!] Advertencia: Usando fuente básica.")
+    except:
         font = ImageFont.load_default()
-        print(f"[!] Error cargando fuente: {e}")
 
-    # 4. Centrado dinámico del texto
-    # Obtenemos las dimensiones del texto para centrarlo en el lienzo de 1080p
+    # Centrado
     bbox = draw.textbbox((0, 0), text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    draw.text(((width - tw) // 2, (height - th) // 2), text, fill=(0, 255, 0), font=font)
     
-    x = (width - text_width) // 2
-    y = (height - text_height) // 2
-    
-    # 5. Dibujamos el texto
-    # Usamos Verde Neón (Estilo Hacker) para máxima visibilidad
-    draw.text((x, y), text, fill=(0, 255, 65), font=font)
-    
-    # Guardamos el payload visual
-    output_path = "ghost_msg.png"
-    image.save(output_path)
-    
-    return output_path
+    path = "ghost_msg.png"
+    image.save(path)
+    return path
